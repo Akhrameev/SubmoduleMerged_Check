@@ -16,7 +16,7 @@ jobs:
           fetch-depth: 100 # Check only last commits in this branch 
     
       - name: Fetch origin/develop # main repository main branch
-        run: git fetch origin develop:develop
+        run: git fetch origin develop:refs/remotes/origin/develop
         shell: bash
 
       - name: Submodule Update (Force)

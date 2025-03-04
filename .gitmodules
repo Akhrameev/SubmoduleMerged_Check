@@ -1,3 +1,3 @@
 [submodule "packages/example-dependency"]
 	path = packages/example-dependency
-	url = https://github.com/githubtraining/example-dependency
+	url = https://github.com/Akhrameev/example-dependency

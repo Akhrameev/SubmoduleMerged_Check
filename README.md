@@ -18,6 +18,14 @@ The workflow, located in `.github/workflows/check_submodule_merged.yml`, perform
 10. **Display Submodule Not Modified:** Announces success if last commit wasn't merged, but also no change was committed to `origin/master`.
 11. **Fail if Not Merged:** Will interrupt the workflow if you didn't merge to `origin/master`. This behavior is what ensures your branches remain properly merged.
 
+## Demonstration
+
+To demonstrate the workflow, the repository contains three open pull requests, each linking to this submodule at a specific commit:
+
+1.  **PR 2: Unreachable Commit:** The submodule is pointed to a commit that *does not exist* in this repository (e.g., a typo in the commit SHA, or a commit that was never pushed). This will cause the workflow to fail, as the commit will be unresolvable.
+2.  **PR 4: Merged Commit:** The submodule is pointed to a commit that *is* present in this repository and has already been merged into the `master` branch. The workflow should succeed in this case.
+3.  **PR 5: Unmerged Commit:** The submodule is pointed to a commit that *is* present in this repository *but has not been merged* into the `master` branch (i.e., the commit exists on a feature branch but has not been pulled into `master`). The workflow should fail in this case, indicating that the changes need to be merged first.
+
 ## Configuration
 
 * **Target Branch:** The workflow currently runs on pushes to the `develop` and `main` branches. You can adjust this in the `on:` section of the workflow file:

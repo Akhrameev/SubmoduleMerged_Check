@@ -1,0 +1,126 @@
+name: Check Submodule Commit Merged (packages/example-dependency)
+
+on:
+  push:
+
+jobs:
+  check_submodule_merged:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          submodules: recursive
+          fetch-depth: 100 # Check only last commits in this branch 
+    
+      - name: Fetch origin/develop # main repository main branch
+        run: git fetch origin develop:develop
+        shell: bash
+
+      - name: Submodule Update (Force)
+        run: |
+          git submodule sync
+          git submodule update --init --recursive --force
+        shell: bash
+
+      - name: Debug Submodule State
+        run: |
+          ls -la packages/example-dependency
+          git status packages/example-dependency
+          git submodule status
+        shell: bash
+
+      - name: Get Submodule Path
+        id: submodule_path
+        run: |
+          SUBMODULE_PATH=$(git config --file .gitmodules --get submodule."packages/example-dependency".path)
+          echo "path=$SUBMODULE_PATH" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Check if Submodule is Modified by Any Unmerged Commit
+        id: submodule_modified
+        run: |
+          # Determine the branch name.
+          BRANCH_NAME=$(echo "${GITHUB_REF}" | sed 's/refs\/heads\///')
+
+          echo "Branch name: $BRANCH_NAME"
+
+          MODIFIED=false
+          for COMMIT in $(git rev-list origin/develop..${BRANCH_NAME} 2>/dev/null); do
+
+            # Get the submodule commit SHA from the parent commit
+            PARENT_SUBMODULE_COMMIT=$(if git cat-file -e $COMMIT^:packages/example-dependency >/dev/null 2>&1; then git ls-tree $COMMIT^:packages | grep example-dependency | awk '{print $3}'; fi)
+
+            # Get the submodule commit SHA from the current commit
+            SUBMODULE_COMMIT=$(git ls-tree $COMMIT:packages | grep example-dependency | awk '{print $3}')
+
+            # Compare the two SHAs
+            if [[ "$PARENT_SUBMODULE_COMMIT" != "$SUBMODULE_COMMIT" ]]; then
+              echo "Commit $COMMIT MODIFIES the submodule."
+              MODIFIED=true
+              echo "modified=true" >> "$GITHUB_OUTPUT"
+              echo "modified_commit=$COMMIT" >> "$GITHUB_OUTPUT"
+              break  # Exit loop on first modification
+            else
+              echo "Commit $COMMIT does NOT modify the submodule."
+            fi
+          done
+
+          if [[ "$MODIFIED" == \"false\" ]]; then
+              echo "modified=false" >> "$GITHUB_OUTPUT"
+              echo "Submodule packages/example-dependency is NOT modified by any unmerged commit."
+          fi
+        shell: bash
+
+      - name: Get Commit SHA
+        id: commit_sha
+        if: steps.submodule_modified.outputs.modified == 'true'
+        run: |
+          # Set the MODIFIED_COMMIT here
+          MODIFIED_COMMIT=${{ steps.submodule_modified.outputs.modified_commit }}
+
+          echo "MODIFIED_COMMIT is $MODIFIED_COMMIT"
+
+          COMMIT_SHA=$(git ls-tree $MODIFIED_COMMIT:packages | grep example-dependency | awk '{print $3}')
+          echo "sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
+          echo "COMMIT_SHA is $COMMIT_SHA"
+        shell: bash
+
+      - name: Check if Commit is Merged
+        id: check_merged
+        if: steps.submodule_modified.outputs.modified == 'true'
+        run: |
+          SUBMODULE_PATH="${{ steps.submodule_path.outputs.path }}"
+          COMMIT_SHA="${{ steps.commit_sha.outputs.sha }}"
+          SUBMODULE_BRANCH="${{ github.event.inputs.submodule_branch || 'origin/master' }}"
+
+          echo "Checking if commit $COMMIT_SHA in submodule packages/example-dependency is merged into origin/master"
+
+          # Go to the 'example-dependency' submodule
+          cd packages/example-dependency || exit 1
+
+          # Check if the commit is an ancestor of the target branch in the submodule repo
+          if git merge-base --is-ancestor "$COMMIT_SHA" "$SUBMODULE_BRANCH"; then
+            echo "merged=true" >> "$GITHUB_OUTPUT"
+            echo "Commit $COMMIT_SHA is merged into $SUBMODULE_BRANCH in submodule"
+          else
+            echo "merged=false" >> "$GITHUB_OUTPUT"
+            echo "Commit $COMMIT_SHA is NOT merged into $SUBMODULE_BRANCH in submodule"
+          fi
+        shell: bash
+
+      - name: Display Merged Status
+        if: steps.submodule_modified.outputs.modified == 'true' && steps.check_merged.outputs.merged == 'true'
+        run: echo "Submodule commit is merged"
+
+      - name: Display Submodule Not Modified
+        if: steps.submodule_modified.outputs.modified == 'false'
+        run: echo "Submodule was not modified, no merge check needed."
+
+      - name: Fail if Not Merged
+        if: steps.submodule_modified.outputs.modified == 'true' && steps.check_merged.outputs.merged == 'false'
+        run: |
+          echo "::error title=Submodule Commit Not Merged::The commit in the submodule is not yet merged into ${{ github.event.inputs.submodule_branch || 'origin/master' }}. Please merge it before merging this pull request"
+          exit 1
+        shell: bash

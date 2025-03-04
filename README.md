@@ -22,9 +22,9 @@ The workflow, located in `.github/workflows/check_submodule_merged.yml`, perform
 
 To demonstrate the workflow, the repository contains three open pull requests, each linking to this submodule at a specific commit:
 
-1.  **PR 2: Unreachable Commit:** The submodule is pointed to a commit that *does not exist* in this repository (e.g., a typo in the commit SHA, or a commit that was never pushed). This will cause the workflow to fail, as the commit will be unresolvable.
-2.  **PR 4: Merged Commit:** The submodule is pointed to a commit that *is* present in this repository and has already been merged into the `master` branch. The workflow should succeed in this case.
-3.  **PR 5: Unmerged Commit:** The submodule is pointed to a commit that *is* present in this repository *but has not been merged* into the `master` branch (i.e., the commit exists on a feature branch but has not been pulled into `master`). The workflow should fail in this case, indicating that the changes need to be merged first.
+1.  **PR 2: Unreachable Commit:** The submodule is pointed to a commit that *does not exist* in this repository (e.g., a typo in the commit SHA, or a commit that was never pushed). This will cause the workflow to fail, as the commit will be unresolvable. [See example PR#2](https://github.com/Akhrameev/SubmoduleMerged_Check/pull/2)
+2.  **PR 4: Merged Commit:** The submodule is pointed to a commit that *is* present in this repository and has already been merged into the `master` branch. The workflow should succeed in this case. [See example PR#4](https://github.com/Akhrameev/SubmoduleMerged_Check/pull/4)
+3.  **PR 5: Unmerged Commit:** The submodule is pointed to a commit that *is* present in this repository *but has not been merged* into the `master` branch (i.e., the commit exists on a feature branch but has not been pulled into `master`). The workflow should fail in this case, indicating that the changes need to be merged first. [See example PR#5](https://github.com/Akhrameev/SubmoduleMerged_Check/pull/5)
 
 ## Configuration
 
